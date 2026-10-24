@@ -1,3 +1,4 @@
+import API_BASE_URL from "../../config/api";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -20,7 +21,7 @@ const Profile = () => {
       if (userId) {
         try {
           const response = await axios.get(
-            `http://localhost:3002/userProfile/${userId}`
+            `${API_BASE_URL}/userProfile/${userId}`
           );
           setUserDetails(response.data);
         } catch (err) {
@@ -105,3 +106,4 @@ const Profile = () => {
 };
 
 export default Profile;
+

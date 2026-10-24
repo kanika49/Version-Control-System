@@ -1,3 +1,4 @@
+import API_BASE_URL from "../../config/api";
 import React, { useState, useEffect } from "react";
 import "./dashboard.css";
 import Navbar from "../Navbar";
@@ -14,7 +15,7 @@ const Dashboard = () => {
     const fetchRepositories = async () => {
       try {
         const response = await fetch(
-          `http://localhost:3002/repo/user/${userId}`
+          `${API_BASE_URL}/repo/user/${userId}`
         );
         const data = await response.json();
         setRepositories(data.repositories);
@@ -25,7 +26,7 @@ const Dashboard = () => {
 
     const fetchSuggestedRepositories = async () => {
       try {
-        const response = await fetch(`http://localhost:3002/repo/all`);
+        const response = await fetch(`${API_BASE_URL}/repo/all`);
         const data = await response.json();
         setSuggestedRepositories(data);
         console.log(suggestedRepositories);
@@ -103,3 +104,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

@@ -1,3 +1,4 @@
+import API_BASE_URL from "../../config/api";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../../authContext";
@@ -26,7 +27,7 @@ const Login = () => {
 
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:3002/login", {
+      const res = await axios.post(`${API_BASE_URL}/login`, {
         email: email,
         password: password,
       });
@@ -107,3 +108,5 @@ const Login = () => {
 };
 
 export default Login;
+
+

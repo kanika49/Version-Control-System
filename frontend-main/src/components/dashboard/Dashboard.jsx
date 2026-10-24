@@ -18,7 +18,7 @@ const Dashboard = () => {
           `${API_BASE_URL}/repo/user/${userId}`
         );
         const data = await response.json();
-        setRepositories(data.repositories);
+        setRepositories(data.repositories || []);
       } catch (err) {
         console.error("Error while fecthing repositories: ", err);
       }
@@ -28,7 +28,7 @@ const Dashboard = () => {
       try {
         const response = await fetch(`${API_BASE_URL}/repo/all`);
         const data = await response.json();
-        setSuggestedRepositories(data);
+        setSuggestedRepositories(Array.isArray(data)?data:[]);
         console.log(suggestedRepositories);
       } catch (err) {
         console.error("Error while fecthing repositories: ", err);

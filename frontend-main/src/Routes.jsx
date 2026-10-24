@@ -1,3 +1,4 @@
+import CreateRepo from "./components/dashboard/CreateRepo";
 import React, { useEffect } from "react";
 import {useNavigate, useRoutes} from 'react-router-dom'
 
@@ -43,6 +44,10 @@ const ProjectRoutes = ()=>{
         {
             path:"/signup",
             element:<Signup/>
+        },
+        {
+             path: "/create",
+             element: <CreateRepo />
         },
         {
             path:"/profile",

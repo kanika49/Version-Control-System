@@ -1,13 +1,27 @@
 const express = require("express");
-const userController = require("../controllers/userController");
+const rateLimit = require("express-rate-limit");
+const c = require("../controllers/userController");
+const { authMiddleware } = require("../middleware/authMiddleware");
+const { requireSelf } = require("../middleware/authorizeMiddleware");
+const { validate, validateObjectIds } = require("../middleware/validate");
 
-const userRouter = express.Router();
+const router = express.Router();
 
-userRouter.get("/allUsers", userController.getAllUsers);
-userRouter.post("/signup", userController.signup);
-userRouter.post("/login", userController.login);
-userRouter.get("/userProfile/:id", userController.getUserProfile);
-userRouter.put("/updateProfile/:id", userController.updateUserProfile);
-userRouter.delete("/deleteProfile/:id", userController.deleteUserProfile);
+// Slow down password guessing: 20 attempts / 15 min / IP on login+signup.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === "test",
+  message: { message: "Too many attempts, try again later" },
+});
 
-module.exports = userRouter;
+router.post("/signup", authLimiter, validate("signup"), c.signup);
+router.post("/login", authLimiter, validate("login"), c.login);
+router.get("/allUsers", authMiddleware, c.getAllUsers);
+router.get("/userProfile/:id", authMiddleware, validateObjectIds("id"), c.getUserProfile);
+router.put("/updateProfile/:id", authMiddleware, validateObjectIds("id"), requireSelf, validate("updateProfile"), c.updateUserProfile);
+router.delete("/deleteProfile/:id", authMiddleware, validateObjectIds("id"), requireSelf, c.deleteUserProfile);
+
+module.exports = router;

@@ -1,15 +1,18 @@
 const express = require("express");
-const repoController = require("../controllers/repoController");
+const c = require("../controllers/repoController");
+const { authMiddleware, optionalAuth } = require("../middleware/authMiddleware");
+const { requireRepoOwner } = require("../middleware/authorizeMiddleware");
+const { validate, validateObjectIds } = require("../middleware/validate");
 
-const repoRouter = express.Router();
+const router = express.Router();
 
-repoRouter.post("/repo/create", repoController.createRepository);
-repoRouter.get("/repo/all", repoController.getAllRepositories);
-repoRouter.get("/repo/:id", repoController.fetchRepositoryById);
-repoRouter.get("/repo/name/:name", repoController.fetchRepositoryByName);
-repoRouter.get("/repo/user/:userID", repoController.fetchRepositoriesForCurrentUser);
-repoRouter.put("/repo/update/:id", repoController.updateRepositoryById);
-repoRouter.delete("/repo/delete/:id", repoController.deleteRepositoryById);
-repoRouter.patch("/repo/toggle/:id", repoController.toggleVisibilityById);
+router.post("/repo/create", authMiddleware, validate("createRepo"), c.createRepository);
+router.get("/repo/all", c.getAllRepositories);
+router.get("/repo/name/:name", optionalAuth, c.fetchRepositoryByName);
+router.get("/repo/user/:userID", optionalAuth, validateObjectIds("userID"), c.fetchRepositoriesForCurrentUser);
+router.get("/repo/:id", optionalAuth, validateObjectIds("id"), c.fetchRepositoryById);
+router.put("/repo/update/:id", authMiddleware, validateObjectIds("id"), requireRepoOwner("id"), validate("updateRepo"), c.updateRepositoryById);
+router.patch("/repo/toggle/:id", authMiddleware, validateObjectIds("id"), requireRepoOwner("id"), c.toggleVisibilityById);
+router.delete("/repo/delete/:id", authMiddleware, validateObjectIds("id"), requireRepoOwner("id"), c.deleteRepositoryById);
 
-module.exports = repoRouter;
+module.exports = router;

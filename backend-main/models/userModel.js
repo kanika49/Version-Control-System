@@ -1,48 +1,17 @@
-
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 const UserSchema = new Schema(
   {
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    password: {
-      type: String,
-    },
-    repositories: [
-      {
-        default: [],
-        type: Schema.Types.ObjectId,
-        ref: "Repository",
-      },
-    ],
-    followedUsers: [
-      {
-        default: [],
-        type: Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    starRepos: [
-      {
-        default: [],
-        type: Schema.Types.ObjectId,
-        ref: "Repository",
-      },
-    ],
+    username: { type: String, required: true, unique: true, trim: true, minlength: 3, maxlength: 30 },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    // select:false => password is NEVER returned unless you ask with .select("+password")
+    password: { type: String, required: true, select: false },
+    repositories: [{ type: Schema.Types.ObjectId, ref: "Repository" }],
+    followedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    starRepos: [{ type: Schema.Types.ObjectId, ref: "Repository" }],
   },
-  { timestamps: true }
+  { timestamps: true } // FIX: options go in the 2nd argument, not inside the fields
 );
 
-const User = mongoose.model("User", UserSchema);
-
-module.exports = User;
-
+module.exports = mongoose.models.User || mongoose.model("User", UserSchema);

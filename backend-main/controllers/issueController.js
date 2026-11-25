@@ -1,103 +1,73 @@
-const mongoose = require("mongoose");
 const Repository = require("../models/repoModel");
-const User = require("../models/userModel");
 const Issue = require("../models/issueModel");
+const asyncHandler = require("../middleware/asyncHandler");
 
-async function createIssue(req, res) {
+// Returns the repo only if this user is allowed to see it.
+async function findVisibleRepo(repoId, userId) {
+  const filter = userId
+    ? { _id: repoId, $or: [{ visibility: true }, { owner: userId }] }
+    : { _id: repoId, visibility: true };
+  return Repository.findOne(filter);
+}
+
+const createIssue = asyncHandler(async (req, res) => {
+  const repo = await findVisibleRepo(req.params.repoId, req.userId);
+  if (!repo) return res.status(404).json({ message: "Repository not found" });
+
   const { title, description } = req.body;
-  const { id } = req.params;
+  const issue = await Issue.create({ title, description, repository: repo._id, author: req.userId });
+  await Repository.findByIdAndUpdate(repo._id, { $push: { issues: issue._id } });
+  res.status(201).json(issue);
+});
 
-  try {
-    const issue = new Issue({
-      title,
-      description,
-      repository: id,
-    });
+const getAllIssues = asyncHandler(async (req, res) => {
+  const repo = await findVisibleRepo(req.params.repoId, req.userId);
+  if (!repo) return res.status(404).json({ message: "Repository not found" });
+  const issues = await Issue.find({ repository: repo._id }).sort({ createdAt: -1 }); // FIX: now awaited
+  res.json(issues);
+});
 
-    await issue.save();
-
-    res.status(201).json(issue);
-  } catch (err) {
-    console.error("Error during issue creation : ", err.message);
-    res.status(500).send("Server error");
+const getIssueById = asyncHandler(async (req, res) => {
+  const issue = await Issue.findById(req.params.id);
+  if (!issue || !(await findVisibleRepo(issue.repository, req.userId))) {
+    return res.status(404).json({ message: "Issue not found!" });
   }
+  res.json(issue);
+});
+
+// Only the issue's author or the repo owner may change or delete it.
+async function loadIssueForEdit(req, res) {
+  const issue = await Issue.findById(req.params.id);
+  if (!issue) {
+    res.status(404).json({ message: "Issue not found!" });
+    return null;
+  }
+  const repo = await Repository.findById(issue.repository);
+  const allowed = String(issue.author) === req.userId || (repo && String(repo.owner) === req.userId);
+  if (!allowed) {
+    res.status(403).json({ message: "Forbidden" });
+    return null;
+  }
+  return issue;
 }
 
-async function updateIssueById(req, res) {
-  const { id } = req.params;
+const updateIssueById = asyncHandler(async (req, res) => {
+  const issue = await loadIssueForEdit(req, res);
+  if (!issue) return;
   const { title, description, status } = req.body;
-  try {
-    const issue = await Issue.findById(id);
+  if (title !== undefined) issue.title = title;
+  if (description !== undefined) issue.description = description;
+  if (status !== undefined) issue.status = status;
+  await issue.save();
+  res.json({ message: "Issue updated", issue }); // FIX: old code passed 2 args to res.json
+});
 
-    if (!issue) {
-      return res.status(404).json({ error: "Issue not found!" });
-    }
+const deleteIssueById = asyncHandler(async (req, res) => {
+  const issue = await loadIssueForEdit(req, res);
+  if (!issue) return;
+  await Repository.findByIdAndUpdate(issue.repository, { $pull: { issues: issue._id } });
+  await issue.deleteOne(); // FIX: old code never awaited, so nothing was actually deleted
+  res.json({ message: "Issue deleted" });
+});
 
-    issue.title = title;
-    issue.description = description;
-    issue.status = status;
-
-    await issue.save();
-
-    res.json(issue, { message: "Issue updated" });
-  } catch (err) {
-    console.error("Error during issue updation : ", err.message);
-    res.status(500).send("Server error");
-  }
-}
-
-async function deleteIssueById(req, res) {
-  const { id } = req.params;
-
-  try {
-    const issue = Issue.findByIdAndDelete(id);
-
-    if (!issue) {
-      return res.status(404).json({ error: "Issue not found!" });
-    }
-    res.json({ message: "Issue deleted" });
-  } catch (err) {
-    console.error("Error during issue deletion : ", err.message);
-    res.status(500).send("Server error");
-  }
-}
-
-async function getAllIssues(req, res) {
-  const { id } = req.params;
-
-  try {
-    const issues = Issue.find({ repository: id });
-
-    if (!issues) {
-      return res.status(404).json({ error: "Issues not found!" });
-    }
-    res.status(200).json(issues);
-  } catch (err) {
-    console.error("Error during issue fetching : ", err.message);
-    res.status(500).send("Server error");
-  }
-}
-
-async function getIssueById(req, res) {
-  const { id } = req.params;
-  try {
-    const issue = await Issue.findById(id);
-
-    if (!issue) {
-      return res.status(404).json({ error: "Issue not found!" });
-    }
-
-    res.json(issue);
-  } catch (err) {
-    console.error("Error during issue updation : ", err.message);
-    res.status(500).send("Server error");
-  }
-}
-
-module.exports = {
-  createIssue,
-  updateIssueById,
-  deleteIssueById,
-  getAllIssues,
-  getIssueById,
-};
+module.exports = { createIssue, getAllIssues, getIssueById, updateIssueById, deleteIssueById };

@@ -1,11 +1,6 @@
-const express = require("express");
-const dotenv = require("dotenv");
-const cors = require("cors");
+require("dotenv").config(); // must run BEFORE other files read process.env
 const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
-const http = require("http");
-const { Server } = require("socket.io");
-const mainRouter = require("./routes/main.router");
+const app = require("./app");
 
 const yargs = require("yargs");
 const { hideBin } = require("yargs/helpers");
@@ -16,8 +11,6 @@ const { commitRepo } = require("./controllers/commit");
 const { pushRepo } = require("./controllers/push");
 const { pullRepo } = require("./controllers/pull");
 const { revertRepo } = require("./controllers/revert");
-
-dotenv.config();
 
 yargs(hideBin(process.argv))
   .command("start", "Starts a new server", {}, startServer)
@@ -67,50 +60,24 @@ yargs(hideBin(process.argv))
   .help().argv;
 
 function startServer() {
-  const app = express();
-  const port = process.env.PORT || 3000;
+  // Fail fast with a clear message instead of crashing later.
+  for (const key of ["MONGODB_URI", "JWT_SECRET_KEY"]) {
+    if (!process.env[key]) {
+      console.error(`Missing ${key} in .env (see .env.example)`);
+      process.exit(1);
+    }
+  }
+  const port = process.env.PORT || 3002; // FIX: default matches what the frontend calls
 
-  app.use(bodyParser.json());
-  app.use(express.json());
-
-  const mongoURI = process.env.MONGODB_URI;
-
+  // Connect to the database first, then start accepting requests.
   mongoose
-    .connect(mongoURI)
-    .then(() => console.log("MongoDB connected!"))
-    .catch((err) => console.error("Unable to connect : ", err));
-
-  app.use(cors({ origin: "*" }));
-
-  app.use("/", mainRouter);
-
-  let user = "test";
-  const httpServer = http.createServer(app);
-  const io = new Server(httpServer, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
-  });
-
-  io.on("connection", (socket) => {
-    socket.on("joinRoom", (userID) => {
-      user = userID;
-      console.log("=====");
-      console.log(user);
-      console.log("=====");
-      socket.join(userID);
+    .connect(process.env.MONGODB_URI)
+    .then(() => {
+      console.log("MongoDB connected!");
+      app.listen(port, () => console.log(`Server is running on PORT ${port}`));
+    })
+    .catch((err) => {
+      console.error("Unable to connect : ", err.message);
+      process.exit(1);
     });
-  });
-
-  const db = mongoose.connection;
-
-  db.once("open", async () => {
-    console.log("CRUD operations called");
-    // CRUD operations
-  });
-
-  httpServer.listen(port, () => {
-    console.log(`Server is running on PORT ${port}`);
-  });
 }

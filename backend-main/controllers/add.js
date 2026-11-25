@@ -1,6 +1,7 @@
 const fs = require("fs").promises;
 const path = require("path");
 const o = require("../vcs/objects");
+const m = require("../vcs/merge");
 const { IGNORED, toPosix, requireRepoRoot, readIndex, writeIndex } = require("../vcs/repo");
 
 // Collect every file under a folder, skipping ignored names.
@@ -32,6 +33,7 @@ async function addRepo(target) {
     if (index[rel] === undefined) throw new Error(`pathspec '${target}' did not match any files`);
     delete index[rel];
     await writeIndex(root, index);
+    await m.markResolved(root, [rel]);
     console.log(`Staged deletion of ${rel}`);
     return;
   }
@@ -55,6 +57,10 @@ async function addRepo(target) {
 
   await writeIndex(root, index);
   console.log(`Added ${added.size} file(s).`);
+
+  // During a merge: a conflicted file is resolved once it is staged without conflict markers.
+  const stillMarked = await m.markResolved(root, [...added]);
+  for (const p of stillMarked) console.log(`warning: ${p} still contains conflict markers (<<<<<<< / >>>>>>>)`);
 }
 
 module.exports = { addRepo };

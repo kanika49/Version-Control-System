@@ -15,6 +15,7 @@ const { statusRepo } = require("./controllers/status");
 const { diffRepo } = require("./controllers/diff");
 const { branchRepo } = require("./controllers/branch");
 const { checkoutRepo } = require("./controllers/checkout");
+const { mergeRepo } = require("./controllers/merge");
 
 // Runs a command and prints a clean message (not a stack trace) if it fails.
 const run = (fn) => async (argv) => {
@@ -64,6 +65,15 @@ yargs(hideBin(process.argv))
         .positional("name", { describe: "Branch name", type: "string" })
         .option("b", { alias: "create", type: "boolean", default: false, describe: "Create the branch" }),
     run((argv) => checkoutRepo(argv.name, { create: argv.b }))
+  )
+    .command(
+    "merge [branch]",
+    "Merge another branch into the current one (use --abort to cancel a merge with conflicts)",
+    (y) =>
+      y
+        .positional("branch", { describe: "Branch to merge in", type: "string" })
+        .option("abort", { type: "boolean", default: false, describe: "Cancel an unfinished merge" }),
+    run((argv) => mergeRepo(argv.branch, { abort: argv.abort }))
   )
   .command(
     "restore <commit>",

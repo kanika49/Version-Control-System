@@ -78,10 +78,12 @@ async function readTree(hash, root) {
     });
 }
 
-// A commit points to a tree and to its parent commit => a history graph.
-async function writeCommit({ tree, parent = null, author, message, timestamp }, root) {
+// A commit points to a tree and to its parent commit(s) => a history graph.
+// A normal commit has one parent; a merge commit has two.
+async function writeCommit({ tree, parents, parent = null, author, message, timestamp }, root) {
+  const list = parents ?? (parent ? [parent] : []);
   const lines = [`tree ${tree}`];
-  if (parent) lines.push(`parent ${parent}`);
+  for (const p of list) lines.push(`parent ${p}`);
   lines.push(`author ${author}`);
   lines.push(`time ${timestamp ?? new Date().toISOString()}`);
   lines.push("", message);
@@ -92,11 +94,15 @@ async function readCommit(hash, root) {
   const { type, content } = await readObject(hash, root);
   if (type !== "commit") throw new Error(`${hash} is not a commit`);
   const [head, ...msg] = content.toString().split("\n\n");
-  const commit = { hash, message: msg.join("\n\n") };
+  const commit = { hash, message: msg.join("\n\n"), parents: [] };
   for (const line of head.split("\n")) {
     const i = line.indexOf(" ");
-    commit[line.slice(0, i)] = line.slice(i + 1);
+    const key = line.slice(0, i);
+    const value = line.slice(i + 1);
+    if (key === "parent") commit.parents.push(value);
+    else commit[key] = value;
   }
+  commit.parent = commit.parents[0]; // first parent (kept for older code)
   return commit;
 }
 

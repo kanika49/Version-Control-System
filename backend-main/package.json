@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Git-style version control platform (API + CLI)",
   "main": "index.js",
+    "bin": { "kgit": "index.js" },
   "scripts": {
     "start": "node index.js start",
     "dev": "node --watch index.js start",

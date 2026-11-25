@@ -1,6 +1,7 @@
-require("dotenv").config(); // must run BEFORE other files read process.env
-const mongoose = require("mongoose");
-const app = require("./app");
+#!/usr/bin/env node
+const path = require("path");
+// Load .env from the backend folder even when the CLI is run from another folder.
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const yargs = require("yargs");
 const { hideBin } = require("yargs/helpers");
@@ -8,68 +9,61 @@ const { hideBin } = require("yargs/helpers");
 const { initRepo } = require("./controllers/init");
 const { addRepo } = require("./controllers/add");
 const { commitRepo } = require("./controllers/commit");
-const { pushRepo } = require("./controllers/push");
-const { pullRepo } = require("./controllers/pull");
-const { revertRepo } = require("./controllers/revert");
+const { logRepo } = require("./controllers/log");
+const { restoreRepo } = require("./controllers/restore");
+
+// Runs a command and prints a clean message (not a stack trace) if it fails.
+const run = (fn) => async (argv) => {
+  try {
+    await fn(argv);
+  } catch (err) {
+    console.error(`error: ${err.message}`);
+    process.exitCode = 1;
+  }
+};
 
 yargs(hideBin(process.argv))
-  .command("start", "Starts a new server", {}, startServer)
-  .command("init", "Initialise a new repository", {}, initRepo)
+  .scriptName("kgit")
+  .command("start", "Start the API server", {}, startServer)
+  .command("init", "Create an empty repository here", {}, run(() => initRepo()))
   .command(
-    "add <file>",
-    "Add a file to the repository",
-    (yargs) => {
-      yargs.positional("file", {
-        describe: "File to add to the staging area",
-        type: "string",
-      });
-    },
-    (argv) => {
-      addRepo(argv.file);
-    }
+    "add <path>",
+    "Stage a file or a whole folder (use . for everything)",
+    (y) => y.positional("path", { describe: "File or folder to stage", type: "string" }),
+    run((argv) => addRepo(argv.path))
   )
   .command(
     "commit <message>",
-    "Commit the staged files",
-    (yargs) => {
-      yargs.positional("message", {
-        describe: "Commit message",
-        type: "string",
-      });
-    },
-    (argv) => {
-      commitRepo(argv.message);
-    }
+    "Save a snapshot of the staged files",
+    (y) => y.positional("message", { describe: "Commit message (use quotes)", type: "string" }),
+    run((argv) => commitRepo(argv.message))
   )
-  .command("push", "Push commits to S3", {}, pushRepo)
-  .command("pull", "Pull commits from S3", {}, pullRepo)
+  .command("log", "Show commit history", {}, run(() => logRepo()))
   .command(
-    "revert <commitID>",
-    "Revert to a specific commit",
-    (yargs) => {
-      yargs.positional("commitID", {
-        describe: "Comit ID to revert to",
-        type: "string",
-      });
-    },
-    (argv) => {
-      revertRepo(argv.commitID);
-    }
+    "restore <commit>",
+    "Restore files from a commit (full or short hash, or HEAD)",
+    (y) => y.positional("commit", { describe: "Commit id", type: "string" }),
+    run((argv) => restoreRepo(argv.commit))
   )
+  // push/pull still use the old storage layout; they are rebuilt in Step 4.
+  .command("push", "Push commits to S3 (being rebuilt)", {}, run(() => require("./controllers/push").pushRepo()))
+  .command("pull", "Pull commits from S3 (being rebuilt)", {}, run(() => require("./controllers/pull").pullRepo()))
   .demandCommand(1, "You need at least one command")
   .help().argv;
 
 function startServer() {
-  // Fail fast with a clear message instead of crashing later.
+  // Loaded only here so the CLI stays fast and does not need the database settings.
+  const mongoose = require("mongoose");
+  const app = require("./app");
+
   for (const key of ["MONGODB_URI", "JWT_SECRET_KEY"]) {
     if (!process.env[key]) {
       console.error(`Missing ${key} in .env (see .env.example)`);
       process.exit(1);
     }
   }
-  const port = process.env.PORT || 3002; // FIX: default matches what the frontend calls
+  const port = process.env.PORT || 3002;
 
-  // Connect to the database first, then start accepting requests.
   mongoose
     .connect(process.env.MONGODB_URI)
     .then(() => {

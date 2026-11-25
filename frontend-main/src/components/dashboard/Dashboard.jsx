@@ -1,7 +1,7 @@
-import API_BASE_URL from "../../config/api";
 import React, { useState, useEffect } from "react";
 import "./dashboard.css";
 import Navbar from "../Navbar";
+import api from "../../api";
 
 const Dashboard = () => {
   const [repositories, setRepositories] = useState([]);
@@ -14,24 +14,22 @@ const Dashboard = () => {
 
     const fetchRepositories = async () => {
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/repo/user/${userId}`
-        );
-        const data = await response.json();
-        setRepositories(data.repositories || []);
+        const res = await api.get(`/repo/user/${userId}`);
+        // The list must always be an array, otherwise .map() crashes the page
+        setRepositories(res.data.repositories ?? []);
       } catch (err) {
-        console.error("Error while fecthing repositories: ", err);
+        console.error("Error while fetching repositories: ", err);
+        setRepositories([]);
       }
     };
 
     const fetchSuggestedRepositories = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/repo/all`);
-        const data = await response.json();
-        setSuggestedRepositories(Array.isArray(data)?data:[]);
-        console.log(suggestedRepositories);
+        const res = await api.get("/repo/all");
+        setSuggestedRepositories(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error("Error while fecthing repositories: ", err);
+        console.error("Error while fetching suggested repositories: ", err);
+        setSuggestedRepositories([]);
       }
     };
 
@@ -40,7 +38,7 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (searchQuery == "") {
+    if (searchQuery === "") {
       setSearchResults(repositories);
     } else {
       const filteredRepo = repositories.filter((repo) =>
@@ -104,4 +102,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

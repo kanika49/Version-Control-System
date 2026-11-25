@@ -1,6 +1,5 @@
-import API_BASE_URL from "../../config/api";
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState } from "react";
+import api from "../../api";
 import { useAuth } from "../../authContext";
 
 import { PageHeader } from "@primer/react/drafts";
@@ -11,12 +10,6 @@ import logo from "../../assets/github-mark-white.svg";
 import { Link } from "react-router-dom";
 
 const Login = () => {
-  // useEffect(() => {
-  //   localStorage.removeItem("token");
-  //   localStorage.removeItem("userId");
-  //   setCurrentUser(null);
-  // });
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +20,7 @@ const Login = () => {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${API_BASE_URL}/login`, {
+      const res = await api.post("/login", {
         email: email,
         password: password,
       });

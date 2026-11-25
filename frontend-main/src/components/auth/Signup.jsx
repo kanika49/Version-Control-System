@@ -1,6 +1,5 @@
-import API_BASE_URL from "../../config/api";
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState } from "react";
+import api from "../../api";
 import { useAuth } from "../../authContext";
 
 import { PageHeader } from "@primer/react/drafts";
@@ -23,7 +22,7 @@ const Signup = () => {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${API_BASE_URL}/signup`, {
+      const res = await api.post("/signup", {
         email: email,
         password: password,
         username: username,
@@ -38,7 +37,13 @@ const Signup = () => {
       window.location.href = "/";
     } catch (err) {
       console.error(err);
-      alert("Signup Failed!");
+      // Show the server's reason (for example "password must be at least 8 characters")
+      const errors = err.response?.data?.errors;
+      alert(
+        errors
+          ? errors.map((e) => `${e.field}: ${e.message}`).join("\n")
+          : err.response?.data?.message || "Signup Failed!"
+      );
       setLoading(false);
     }
   };

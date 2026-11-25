@@ -27,7 +27,7 @@ const ProjectRoutes = ()=>{
             navigate("/auth");
         }
 
-        if(userIdFromStorage && window.location.pathname=='/auth'){
+        if(userIdFromStorage && window.location.pathname ==="/auth"){
             navigate("/");
         }
     }, [currentUser, navigate, setCurrentUser]);

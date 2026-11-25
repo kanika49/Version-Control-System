@@ -11,6 +11,10 @@ const { addRepo } = require("./controllers/add");
 const { commitRepo } = require("./controllers/commit");
 const { logRepo } = require("./controllers/log");
 const { restoreRepo } = require("./controllers/restore");
+const { statusRepo } = require("./controllers/status");
+const { diffRepo } = require("./controllers/diff");
+const { branchRepo } = require("./controllers/branch");
+const { checkoutRepo } = require("./controllers/checkout");
 
 // Runs a command and prints a clean message (not a stack trace) if it fails.
 const run = (fn) => async (argv) => {
@@ -39,6 +43,28 @@ yargs(hideBin(process.argv))
     run((argv) => commitRepo(argv.message))
   )
   .command("log", "Show commit history", {}, run(() => logRepo()))
+  .command("status", "Show staged, unstaged and untracked files", {}, run(() => statusRepo()))
+  .command(
+    "diff",
+    "Show line changes (working folder vs staged; use --staged for staged vs last commit)",
+    (y) => y.option("staged", { alias: "cached", type: "boolean", default: false }),
+    run((argv) => diffRepo({ staged: argv.staged }))
+  )
+  .command(
+    "branch [name]",
+    "List branches, or create one at the current commit",
+    (y) => y.positional("name", { describe: "New branch name", type: "string" }),
+    run((argv) => branchRepo(argv.name))
+  )
+  .command(
+    "checkout <name>",
+    "Switch to a branch (use -b to create it first)",
+    (y) =>
+      y
+        .positional("name", { describe: "Branch name", type: "string" })
+        .option("b", { alias: "create", type: "boolean", default: false, describe: "Create the branch" }),
+    run((argv) => checkoutRepo(argv.name, { create: argv.b }))
+  )
   .command(
     "restore <commit>",
     "Restore files from a commit (full or short hash, or HEAD)",

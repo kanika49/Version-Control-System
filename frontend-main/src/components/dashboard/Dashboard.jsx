@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import "./dashboard.css";
+import "../repo/repo.css";
 import Navbar from "../Navbar";
 import api from "../../api";
+
+const RepoItem = ({ repo }) => (
+  <div className="repo-list-item">
+    <h4>
+      <Link to={`/repo/${repo._id}`}>{repo.name}</Link>{" "}
+      {repo.visibility === false && <span className="repo-badge">Private</span>}
+    </h4>
+    <h4>{repo.description}</h4>
+  </div>
+);
 
 const Dashboard = () => {
   const [repositories, setRepositories] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestedRepositories, setSuggestedRepositories] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -20,6 +33,8 @@ const Dashboard = () => {
       } catch (err) {
         console.error("Error while fetching repositories: ", err);
         setRepositories([]);
+      } finally {
+        setLoaded(true);
       }
     };
 
@@ -41,10 +56,9 @@ const Dashboard = () => {
     if (searchQuery === "") {
       setSearchResults(repositories);
     } else {
-      const filteredRepo = repositories.filter((repo) =>
-        repo.name.toLowerCase().includes(searchQuery.toLowerCase())
+      setSearchResults(
+        repositories.filter((repo) => repo.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
-      setSearchResults(filteredRepo);
     }
   }, [searchQuery, repositories]);
 
@@ -53,18 +67,20 @@ const Dashboard = () => {
       <Navbar />
       <section id="dashboard">
         <aside>
-          <h3>Suggested Repositories</h3>
-          {suggestedRepositories.map((repo) => {
-            return (
-              <div key={repo._id}>
-                <h4>{repo.name}</h4>
-                <h4>{repo.description}</h4>
-              </div>
-            );
-          })}
+          <h3>Explore repositories</h3>
+          {suggestedRepositories.length === 0 && <p>No public repositories yet.</p>}
+          {suggestedRepositories.map((repo) => (
+            <RepoItem key={repo._id} repo={repo} />
+          ))}
         </aside>
+
         <main>
           <h2>Your Repositories</h2>
+          <div className="repo-actions" style={{ marginBottom: 12 }}>
+            <Link to="/create" className="repo-btn primary" style={{ textDecoration: "none" }}>
+              New repository
+            </Link>
+          </div>
           <div id="search">
             <input
               type="text"
@@ -73,28 +89,22 @@ const Dashboard = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          {searchResults.map((repo) => {
-            return (
-              <div key={repo._id}>
-                <h4>{repo.name}</h4>
-                <h4>{repo.description}</h4>
-              </div>
-            );
-          })}
+          {loaded && repositories.length === 0 && (
+            <p>You don't have any repositories yet. Create your first one!</p>
+          )}
+          {loaded && repositories.length > 0 && searchResults.length === 0 && <p>No matches.</p>}
+          {searchResults.map((repo) => (
+            <RepoItem key={repo._id} repo={repo} />
+          ))}
         </main>
+
         <aside>
-          <h3>Upcoming Events</h3>
-          <ul>
-            <li>
-              <p>Tech Conference - Dec 15</p>
-            </li>
-            <li>
-              <p>Developer Meetup - Dec 25</p>
-            </li>
-            <li>
-              <p>React Summit - Jan 5</p>
-            </li>
-          </ul>
+          <h3>Quick start</h3>
+          <pre>{`kgit init
+kgit add .
+kgit commit "message"
+kgit branch feature
+kgit merge feature`}</pre>
         </aside>
       </section>
     </>

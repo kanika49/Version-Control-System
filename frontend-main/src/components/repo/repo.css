@@ -1,0 +1,136 @@
+.repo-page,
+.create-repo {
+  width: min(760px, 92vw);
+  margin: 32px auto;
+  text-align: left;
+}
+
+.repo-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.repo-title h2 {
+  margin: 0;
+  word-break: break-all;
+}
+.repo-badge {
+  border: 1px solid #8b949e;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  color: #c9d1d9;
+}
+.repo-meta {
+  color: #8b949e;
+  margin: 8px 0 20px;
+}
+.repo-description {
+  font-size: 16px;
+  margin-bottom: 24px;
+}
+.repo-card {
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  background: #161b22;
+}
+.repo-card h3 {
+  margin-top: 0;
+}
+.repo-card pre {
+  background: #0d1117;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.repo-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.repo-btn {
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #363b42;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.repo-btn:hover {
+  background: #30363d;
+}
+.repo-btn.primary {
+  background: #238636;
+  border-color: #2ea043;
+  color: #fff;
+}
+.repo-btn.primary:hover {
+  background: #2ea043;
+}
+.repo-btn.danger {
+  color: #f85149;
+  border-color: #f85149;
+}
+.repo-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.create-repo h2 {
+  margin-bottom: 4px;
+}
+.create-repo .hint {
+  color: #8b949e;
+  margin: 0 0 24px;
+}
+.create-repo label {
+  display: block;
+  font-weight: 600;
+  margin: 18px 0 6px;
+}
+.create-repo input[type="text"],
+.create-repo textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 15px;
+}
+.visibility-option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-weight: normal;
+  cursor: pointer;
+}
+.visibility-option small {
+  display: block;
+  color: #8b949e;
+}
+.form-error {
+  color: #f85149;
+  margin-top: 16px;
+}
+
+.repo-list-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #30363d;
+}
+.repo-list-item h4 {
+  margin: 2px 0;
+}
+.repo-list-item a {
+  font-weight: 600;
+}

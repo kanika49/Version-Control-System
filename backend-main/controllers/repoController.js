@@ -2,7 +2,7 @@ const Repository = require("../models/repoModel");
 const User = require("../models/userModel");
 const Issue = require("../models/issueModel");
 const asyncHandler = require("../middleware/asyncHandler");
-
+const GitObject = require("../models/objectModel");
 // Public repos are visible to everyone; private ones only to their owner.
 const visibleTo = (userId) =>
   userId ? { $or: [{ visibility: true }, { owner: userId }] } : { visibility: true };
@@ -66,6 +66,7 @@ const toggleVisibilityById = asyncHandler(async (req, res) => {
 
 const deleteRepositoryById = asyncHandler(async (req, res) => {
   await Issue.deleteMany({ repository: req.repo._id });
+  await GitObject.deleteMany({ repo: req.repo._id });
   await User.findByIdAndUpdate(req.repo.owner, { $pull: { repositories: req.repo._id } });
   await req.repo.deleteOne();
   res.json({ message: "Repository deleted successfully!" });

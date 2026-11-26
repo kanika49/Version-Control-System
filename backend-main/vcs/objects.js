@@ -1,17 +1,19 @@
 // Content-addressable object storage (the heart of Git).
 // Three object types: blob (file contents), tree (directory snapshot), commit (tree + parent + message).
 
+// Content-addressable object storage (the heart of Git).
+// Three object types: blob (file contents), tree (directory snapshot), commit (tree + parent + message).
+
 const fs = require("fs").promises;
 const path = require("path");
 const zlib = require("zlib");
-const crypto = require("crypto");
 const { promisify } = require("util");
+const codec = require("./codec");
 
 const deflate = promisify(zlib.deflate);
 const inflate = promisify(zlib.inflate);
 
 const REPO_DIR = ".kgit";
-const HASH_ALGO = "sha256";
 
 function objectsDir(root) {
   return path.join(root, REPO_DIR, "objects");
@@ -21,7 +23,7 @@ function objectsDir(root) {
 function hashObject(type, content) {
   const header = Buffer.from(`${type} ${content.length}\0`);
   const full = Buffer.concat([header, content]);
-  return { hash: crypto.createHash(HASH_ALGO).update(full).digest("hex"), full };
+  return { hash: codec.hashFull(full), full };
 }
 
 // Stored compressed at objects/ab/cdef...; skipped if it already exists (deduplication).
@@ -41,13 +43,7 @@ async function writeObject(type, content, root) {
 // Reads an object back and verifies its integrity (hash must match its name).
 async function readObject(hash, root) {
   const file = path.join(objectsDir(root), hash.slice(0, 2), hash.slice(2));
-  const full = await inflate(await fs.readFile(file));
-  const nul = full.indexOf(0);
-  const [type, size] = full.subarray(0, nul).toString().split(" ");
-  const content = full.subarray(nul + 1);
-  if (Number(size) !== content.length) throw new Error(`Corrupt object ${hash}`);
-  if (hashObject(type, content).hash !== hash) throw new Error(`Hash mismatch for ${hash}`);
-  return { type, content };
+  return codec.decodeObject(await fs.readFile(file), hash);
 }
 
 const writeBlob = (buffer, root) => writeObject("blob", buffer, root);
@@ -67,15 +63,7 @@ async function writeTree(entries, root) {
 async function readTree(hash, root) {
   const { type, content } = await readObject(hash, root);
   if (type !== "tree") throw new Error(`${hash} is not a tree`);
-  return content
-    .toString()
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => {
-      const [meta, name] = line.split("\t");
-      const [mode, t, h] = meta.split(" ");
-      return { mode, type: t, hash: h, name };
-    });
+  return codec.parseTreeContent(content);
 }
 
 // A commit points to a tree and to its parent commit(s) => a history graph.
@@ -93,17 +81,7 @@ async function writeCommit({ tree, parents, parent = null, author, message, time
 async function readCommit(hash, root) {
   const { type, content } = await readObject(hash, root);
   if (type !== "commit") throw new Error(`${hash} is not a commit`);
-  const [head, ...msg] = content.toString().split("\n\n");
-  const commit = { hash, message: msg.join("\n\n"), parents: [] };
-  for (const line of head.split("\n")) {
-    const i = line.indexOf(" ");
-    const key = line.slice(0, i);
-    const value = line.slice(i + 1);
-    if (key === "parent") commit.parents.push(value);
-    else commit[key] = value;
-  }
-  commit.parent = commit.parents[0]; // first parent (kept for older code)
-  return commit;
+  return codec.parseCommitContent(content, hash);
 }
 
 module.exports = {

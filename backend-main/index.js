@@ -16,6 +16,11 @@ const { diffRepo } = require("./controllers/diff");
 const { branchRepo } = require("./controllers/branch");
 const { checkoutRepo } = require("./controllers/checkout");
 const { mergeRepo } = require("./controllers/merge");
+const { loginCmd, logoutCmd } = require("./controllers/auth");
+const { remoteCmd } = require("./controllers/setRemote");
+const { pushRepo } = require("./controllers/push");
+const { pullRepo } = require("./controllers/pull");
+const { cloneRepo } = require("./controllers/clone");
 
 // Runs a command and prints a clean message (not a stack trace) if it fails.
 const run = (fn) => async (argv) => {
@@ -66,7 +71,7 @@ yargs(hideBin(process.argv))
         .option("b", { alias: "create", type: "boolean", default: false, describe: "Create the branch" }),
     run((argv) => checkoutRepo(argv.name, { create: argv.b }))
   )
-    .command(
+  .command(
     "merge [branch]",
     "Merge another branch into the current one (use --abort to cancel a merge with conflicts)",
     (y) =>
@@ -81,9 +86,30 @@ yargs(hideBin(process.argv))
     (y) => y.positional("commit", { describe: "Commit id", type: "string" }),
     run((argv) => restoreRepo(argv.commit))
   )
-  // push/pull still use the old storage layout; they are rebuilt in Step 4.
-  .command("push", "Push commits to S3 (being rebuilt)", {}, run(() => require("./controllers/push").pushRepo()))
-  .command("pull", "Pull commits from S3 (being rebuilt)", {}, run(() => require("./controllers/pull").pullRepo()))
+  .command(
+    "login",
+    "Log in to the server (needed for push)",
+    (y) => y.option("server", { type: "string", describe: "Server address, e.g. http://localhost:3002" }),
+    run((argv) => loginCmd({ server: argv.server }))
+  )
+  .command("logout", "Forget your saved login", {}, run(() => logoutCmd()))
+  .command(
+    "remote <repoId>",
+    "Link this folder to a repository on the website",
+    (y) => y.positional("repoId", { describe: "Repository id from the repository page", type: "string" }),
+    run((argv) => remoteCmd(argv.repoId))
+  )
+  .command("push", "Upload the current branch to the server", {}, run(() => pushRepo()))
+  .command("pull", "Download the remote branch and merge it", {}, run(() => pullRepo()))
+  .command(
+    "clone <repoId> [folder]",
+    "Copy a repository from the server into a new folder",
+    (y) =>
+      y
+        .positional("repoId", { describe: "Repository id from the repository page", type: "string" })
+        .positional("folder", { describe: "Folder to create", type: "string" }),
+    run((argv) => cloneRepo(argv.repoId, argv.folder))
+  )
   .demandCommand(1, "You need at least one command")
   .help().argv;
 

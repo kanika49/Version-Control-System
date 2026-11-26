@@ -4,7 +4,7 @@ const User = require("../models/userModel");
 const Repository = require("../models/repoModel");
 const Issue = require("../models/issueModel");
 const asyncHandler = require("../middleware/asyncHandler");
-
+const GitObject = require("../models/objectModel");
 const signToken = (id) =>
   jwt.sign({ id: String(id) }, process.env.JWT_SECRET_KEY, { expiresIn: "1h" });
 
@@ -60,6 +60,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
 const deleteUserProfile = asyncHandler(async (req, res) => {
   const id = req.params.id;
+    await GitObject.deleteMany({ repo: { $in: ownedIds } });
   const user = await User.findByIdAndDelete(id); // FIX: old code checked "deleteCount" (typo)
   if (!user) return res.status(404).json({ message: "User not found!" });
 
